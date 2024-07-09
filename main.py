@@ -13,7 +13,7 @@ from pathlib import Path
     # - Content
 
 class List:
-    def __init__(self, title, owner, content, file_path=os.curdir):
+    def __init__(self, title: str, owner: str, content: str, file_path=os.curdir):
         self.owner = owner
         self.title = title
         self.location = file_path
@@ -39,25 +39,38 @@ class List:
             self.add_item(list_path, content)
 
 
-    def add_item(self, list_path, content):
-        with open(f'{list_path}.txt', 'w') as file:
-            file.write(content)
+    def add_item(self, list_path: str, content: str):
+        # Content strucutre:
+        # "str-str-str"...
+        formatted_content = []
+        # Extend or append to the 'formatted_content' array depending on if there are one or more 'list items'
+        formatted_content.extend(content.split('-')) if '-' in content else formatted_content.append(content)
+        with open(f'{list_path}.txt', 'a') as file:
+            if len(formatted_content) > 1:
+                file.writelines(formatted_content)
+            else:
+                file.write(formatted_content)
 
-    def read_list(self):
-        pass
+    def read_list(self, list_path):
+        with open(f'{list_path}.txt', 'r') as file:
+            file.read()
 
-    def remove_item(self):
-        pass
+    def remove_item(self, list_path):
+        # Gotta think of a way to be able to remove list items from the .txt file
+        with open(f'{list_path}.txt', '') as file:
+            file.read()
 
     
 
 class User:
     def __init__(self):
-        self.lists = []
+        self.user_lists = []
         pass
 
     def create_list(self, title, owner, content, file_path):
-        List(title, owner, content, file_path)
+        # Every time a new list is made for the User instance, add it to it's list of lists
+        new_list = List(title, owner, content, file_path)
+        self.user_lists.append(new_list)
 
 
 if __name__ == "__main__":
