@@ -1,5 +1,8 @@
 import os
+import time
 from pathlib import Path
+from string import ascii_letters
+from string import digits
 # Foundation for "to-do list":
 # Have at least one list available to any one user ( >= 1 )
 # The lists data needs to be saved in a .txt file
@@ -65,13 +68,48 @@ class List:
 class User:
     def __init__(self):
         self.user_lists = []
-        pass
 
     def create_list(self, title, owner, content, file_path):
-        # Every time a new list is made for the User instance, add it to it's list of lists
+        # Every time a new List is made for the User instance, add it to it's list of lists
         new_list = List(title, owner, content, file_path)
         self.user_lists.append(new_list)
 
+    def get_lists(self):
+        if len(self.user_lists) == 0:
+            print("No lists available for this user")
+            return
+        print("Available Lists:")
+        for list in self.user_lists:
+            print(f"\t- {list.title}")
+
 
 if __name__ == "__main__":
-    pass
+    print('Hello! What do you want to do?')
+    while True:
+        try:
+            user_input = input('Make a new list(M), Add to an existing list(A),\nRead one of your lists(R), or edit a list(E): ').upper()
+            assert user_input in ['M', 'A', 'R', 'E']
+        except: 
+            print('Wrong input!\nThe answer must be one of the capital letters provided in the parentheses')
+            time.sleep(1.7)
+            os.system('cls')
+            continue
+        else:
+            match user_input:
+                case 'M':
+                    print("To make a new list you'll have to answer a few questions: ")
+                    user_name = input('What directory(folder) name do you want your list to be under: ').lower()
+                    list_title = input('Choose what is going to be the title of your list: ').lower()
+                    user_content = input("What do you want to write in your list?\n(you need to follow the format 'item-item-item...', the dash is used as a seperator):\n")
+                    file_path = input('Lastly, choose the file path, where you want to store your folder of lists(full file path): ')
+                    if digits not in file_path and ascii_letters not in file_path:
+                        file_path = os.curdir
+                    new_user = User()
+                    new_user.create_list(list_title, user_name, user_content, file_path)
+                case 'A':
+                    print('A')
+                case 'R':
+                    print('R')
+                case 'E':
+                    print('E')
+        
