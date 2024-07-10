@@ -1,8 +1,6 @@
 import os
 import time
 from pathlib import Path
-from string import ascii_letters
-from string import digits
 # Foundation for "to-do list":
 # Have at least one list available to any one user ( >= 1 )
 # The lists data needs to be saved in a .txt file
@@ -20,7 +18,7 @@ from string import digits
 # This will help go through less actions and save time(albeit very little, but we love a little challenge)
 
 class List:
-    def __init__(self, title: str, owner: str, content: str, file_path=os.curdir):
+    def __init__(self, title: str, owner: str, content: str, file_path):
         self.owner = owner
         self.title = title
         self.location = file_path
@@ -48,15 +46,11 @@ class List:
 
     def add_item(self, list_path: str, content: str):
         # Content strucutre:
-        # "str-str-str"...
+        # "-str-str-str"...
         formatted_content = []
-        # Extend or append to the 'formatted_content' array depending on if there are one or more 'list items'
-        formatted_content.extend(content.split('-')) if '-' in content else formatted_content.append(content)
+        formatted_content.extend("\n- ".join(content.split('-')))
         with open(f'{list_path}.txt', 'a') as file:
-            if len(formatted_content) > 1:
                 file.writelines(formatted_content)
-            else:
-                file.write(f"- {formatted_content}")
 
     def read_list(self, list_path):
         with open(f'{list_path}.txt', 'r') as file:
@@ -99,21 +93,23 @@ def load_users(file_path):
 
     # I'll assume all user folders are stored in one place
     # and make User instances based on folders and files found
-    user_info_dict = {}
+    user_info = {}
     for (dir_path, sub_folder, files) in os.walk(file_path):
         for folder in sub_folder:
-            if folder[0] != '.':
+            if folder.isalnum():
                 files_in_folder = os.listdir(f'{dir_path}\\{folder}')
+                #print(folder, 'folder')
                 for file in files_in_folder:
-                    with open(f'{dir_path}\\{folder}\\{file}') as file:
-                        list_content = file.read()
-                        user_info_dict[folder] = User(file, folder, list_content)
+                    with open(f'{dir_path}\\{folder}\\{file}') as doc:
+                        list_content = doc.read()
+                        user_info[folder] = User(file, folder, list_content)
 
-        return user_info_dict
+        return user_info
 
 if __name__ == "__main__":
     users_file_path = input("Before we start, if you have any lists already made, enter their file path here:\n")
     existing_users = load_users(users_file_path)
+    #print(existing_users)
     print('Hello! What do you want to do next?')
     while True:
         try:
@@ -121,8 +117,8 @@ if __name__ == "__main__":
             assert user_input in ['M', 'A', 'R', 'E']
         except: 
             print('Wrong input!\nThe answer must be one of the capital letters provided in the parentheses')
-            time.sleep(1.7)
-            os.system('cls')
+            #time.sleep(1.7)
+            #os.system('cls')
             continue
         else:
             # Things we need to get to a list(file):
@@ -130,13 +126,12 @@ if __name__ == "__main__":
             #   - Title of list
             #   - File path
 
-            print("To make a new list you'll have to answer a few questions: ")
-            user_name = input('\nWhat directory(folder) name do you want your list to be under: ').lower()
+            user_name = input('What directory(folder) name do you want your list to be under\n(a valid folder name is alphanumeric(no special characters)): ').lower()
             list_title = input('Choose what is going to be the title of your list: ').lower()
             match user_input:
                 case 'M':
-                    user_content = input("What do you want to write in your list?\n(you need to follow the format 'item-item-item...', the dash is used as a seperator):\n")
-                    if digits not in users_file_path and ascii_letters not in users_file_path:
+                    user_content = input("What do you want to write in your list?\n(follow the format '-item-item-item...', the dash is used as a seperator):\n")
+                    if not Path(users_file_path).is_dir() and users_file_path[0] == '.':
                         users_file_path = os.curdir
                     new_user = User(list_title, user_name, user_content)
                     new_user.create_list(list_title, user_name, user_content, users_file_path)
@@ -147,5 +142,6 @@ if __name__ == "__main__":
                     print('R')
                 case 'E':
                     print('E')
-        os.system('cls')
+        
+        #os.system('cls')
         
