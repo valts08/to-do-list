@@ -57,7 +57,8 @@ class List:
 
     def read_list(self, list_path):
         with open(f'{list_path}.txt', 'r') as file:
-            file.read()
+            content = file.read()
+            print(content)
 
     def remove_item(self, list_path):
         # Gotta think of a way to be able to remove list items from the .txt file
@@ -94,6 +95,7 @@ def load_users(file_path):
 
     # I'll assume all user folders are stored in one place
     # and make User instances based on folders and files found
+    # then I append all of the List instances a user has to the appropriate User instance
     user_info = {}
     for (dir_path, sub_folder, files) in os.walk(file_path):
         for folder in sub_folder:
@@ -103,7 +105,7 @@ def load_users(file_path):
                 for file in files_in_folder:
                     with open(f'{dir_path}\\{folder}\\{file}', 'r') as doc:
                         list_content = doc.read()
-                        # We pass "file[:-4] to get rid of the ".txt" portion of the string"
+                        # We pass "file[:-4] to get rid of the ".txt" portion of the string
                         # because the user input is purely the name of the list e.g. "blabla", not "blabla.txt"
                         user_info[folder].user_lists.append(List(file[:-4], folder, list_content, dir_path, make_with_user=False))
 
@@ -133,25 +135,24 @@ if __name__ == "__main__":
             #   - Name of user
             #   - Title of list
             #   - File path
-
             match user_input:
                 case 'M':
-                    user_name = input('What directory(folder) name do you want your list to be under\n(a valid folder name is alphanumeric(no special characters)): ').lower()
+                    user_name = input('What directory(folder) name do you want your list to be under?\n(a valid folder name is alphanumeric(no special characters)): ').lower()
                     list_title = input('Choose what is going to be the title of your list: ').lower()
                     user_content = input("What do you want to write in your list?\n(follow the format '-item-item-item...', the dash is used as a seperator):\n")
                     if not Path(users_file_path).is_dir():
-                        #  Change the 2nd part of this if statement, it doesn't make sense
                         print(f"Couldn't find path: {users_file_path}\nUsing current directory instead...")
                         users_file_path = os.curdir
                     new_user = User(user_name)
                     new_user.create_list(list_title, user_name, user_content, users_file_path)
                 case 'A':
                     # Add items to an existing list
-                    user_name = input('What directory(folder) name do you want your list to be under\n(a valid folder name is alphanumeric(no special characters)): ').lower()
+                    user_name = input('What directory(folder) name do you want your list to be under?\n(a valid folder name is alphanumeric(no special characters)): ').lower()
                     try:
                         # Check if user exists
-                        assert Path(f'{users_file_path}\\{user_name}').is_dir(), "Folder doesn't exist"
+                        assert Path(f'{users_file_path}\\{user_name}').is_dir()
                     except AssertionError as e:
+                        print("Folder doesn't exist")
                         print(e)
                     list_title = input('Choose what is going to be the title of your list: ').lower()
                     full_file_path = f'{users_file_path}\\{user_name}\\{list_title}'
@@ -171,7 +172,30 @@ if __name__ == "__main__":
                         active_user_list.add_item(full_file_path, user_content, 'a')
                 case 'R':
                     # Read content of existing list
-                    print('R')
+                    user_name = input('What directory(folder) name is your list under?\n(a valid folder name is alphanumeric(no special characters)): ').lower()
+                    try:
+                        # Check if user exists
+                        assert Path(f'{users_file_path}\\{user_name}').is_dir()
+                    except AssertionError as e:
+                        print("Folder doesn't exist")
+                        print(e)
+                    list_title = input("The title of the list you're looking for: ").lower()
+                    full_file_path = f'{users_file_path}\\{user_name}\\{list_title}'
+                    try:
+                        has_list = False
+                        # Check if file exists for given user
+                        for user_list in existing_users[user_name].user_lists:
+                            if user_list.title == list_title:
+                                has_list = True
+                                active_user_list = user_list
+                        assert has_list
+                    except AssertionError as e:
+                        print(f'List at path: {full_file_path}.txt was not found')
+                        print(e, ' Error')
+                    else:
+                        print(f"Contents of list '{active_user_list.title}'")
+                        active_user_list.read_list(full_file_path)
+                    pass
                 case 'E':
                     # Edit an existing list
                     print('E')
