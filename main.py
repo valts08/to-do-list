@@ -38,21 +38,22 @@ class List:
                 # check if the list you're looking for exists
                 assert Path(f'{list_path}').is_file(), 'File path already exists'
             except AssertionError:
-                # just add text to it, if it does exist
-                self.add_item(list_path, content)
-            else:
                 # make and open the list for writing, if it doesn't exist
-                with open(f'{list_path}.txt', "x") as file:
-                    file.write(f"- {content}")
+                self.add_item(list_path, content, 'x')
+            else:
+                # just add text to it, if it does exist
+                self.add_item(list_path, content, 'a')
 
 
-    def add_item(self, list_path: str, content: str):
+    def add_item(self, list_path: str, content: str, action: str):
         # Content strucutre:
         # "-str-str-str"...
         formatted_content = []
         formatted_content.extend("\n- ".join(content.split('-')))
-        with open(f'{list_path}.txt', 'a') as file:
-                file.writelines(formatted_content)
+        with open(f'{list_path}.txt', action) as file:
+            if action == 'x':
+                file.write(f'{list_path.split('\\')[-1]} list:') 
+            file.writelines(formatted_content)
 
     def read_list(self, list_path):
         with open(f'{list_path}.txt', 'r') as file:
@@ -98,10 +99,9 @@ def load_users(file_path):
         for folder in sub_folder:
             if folder.isalnum():
                 files_in_folder = os.listdir(f'{dir_path}\\{folder}')
-                #print(folder, 'folder')
                 user_info[folder] = User(folder)
                 for file in files_in_folder:
-                    with open(f'{dir_path}\\{folder}\\{file}') as doc:
+                    with open(f'{dir_path}\\{folder}\\{file}', 'r') as doc:
                         list_content = doc.read()
                         # We pass "file[:-4] to get rid of the ".txt" portion of the string"
                         # because the user input is purely the name of the list e.g. "blabla", not "blabla.txt"
@@ -110,10 +110,12 @@ def load_users(file_path):
         return user_info
 
 if __name__ == "__main__":
-    users_file_path = input("Before we start, if you have any lists already made, enter their file path here:\n")
-    print('Hello! What do you want to do next?')
-    while True:
+    running = True
+    users_file_path = input("Hello! Enter file path with existing lists, or a new one:\n")
+    print('What do you want to do next?')
+    while running:
         # Load user data every time an action is done
+
         # This should be changed later on to only update 
         # if there is any additional data the user passed
         existing_users = load_users(users_file_path)
@@ -123,8 +125,8 @@ if __name__ == "__main__":
             assert user_input in ['M', 'A', 'R', 'E']
         except: 
             print('Wrong input!\nThe answer must be one of the capital letters provided in the parentheses')
-            #time.sleep(1.7)
-            #os.system('cls')
+            time.sleep(2)
+            os.system('cls')
             continue
         else:
             # Things we need to get to a list(file):
@@ -132,21 +134,29 @@ if __name__ == "__main__":
             #   - Title of list
             #   - File path
 
-            user_name = input('What directory(folder) name do you want your list to be under\n(a valid folder name is alphanumeric(no special characters)): ').lower()
-            list_title = input('Choose what is going to be the title of your list: ').lower()
-            user_content = input("What do you want to write in your list?\n(follow the format '-item-item-item...', the dash is used as a seperator):\n")
-            full_file_path = f'{users_file_path}\\{user_name}\\{list_title}'
             match user_input:
                 case 'M':
-                    if not Path(users_file_path).is_dir() and users_file_path[0] == '.':
+                    user_name = input('What directory(folder) name do you want your list to be under\n(a valid folder name is alphanumeric(no special characters)): ').lower()
+                    list_title = input('Choose what is going to be the title of your list: ').lower()
+                    user_content = input("What do you want to write in your list?\n(follow the format '-item-item-item...', the dash is used as a seperator):\n")
+                    if not Path(users_file_path).is_dir():
                         #  Change the 2nd part of this if statement, it doesn't make sense
+                        print(f"Couldn't find path: {users_file_path}\nUsing current directory instead...")
                         users_file_path = os.curdir
                     new_user = User(user_name)
                     new_user.create_list(list_title, user_name, user_content, users_file_path)
                 case 'A':
                     # Add items to an existing list
-                    has_list = False
+                    user_name = input('What directory(folder) name do you want your list to be under\n(a valid folder name is alphanumeric(no special characters)): ').lower()
                     try:
+                        # Check if user exists
+                        assert Path(f'{users_file_path}\\{user_name}').is_dir(), "Folder doesn't exist"
+                    except AssertionError as e:
+                        print(e)
+                    list_title = input('Choose what is going to be the title of your list: ').lower()
+                    full_file_path = f'{users_file_path}\\{user_name}\\{list_title}'
+                    try:
+                        has_list = False
                         # Check if file exists for given user
                         for user_list in existing_users[user_name].user_lists:
                             if user_list.title == list_title:
@@ -157,13 +167,21 @@ if __name__ == "__main__":
                         print(f'List at path: {full_file_path}.txt was not found')
                         print(e, ' Error')
                     else:
-                        active_user_list.add_item(full_file_path, user_content)
+                        user_content = input("What do you want to write in your list?\n(follow the format '-item-item-item...', the dash is used as a seperator):\n")
+                        active_user_list.add_item(full_file_path, user_content, 'a')
                 case 'R':
                     # Read content of existing list
                     print('R')
                 case 'E':
                     # Edit an existing list
                     print('E')
+            stop_script = input("Would you like to make any further changes? (Y\\N)").upper()
+            try:
+                assert stop_script == 'Y'
+            except AssertionError:
+                print("Stopping 'To-do list'...")
+                running = False
+            else: continue
         
-        #os.system('cls')
+        os.system('cls')
         
