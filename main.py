@@ -1,6 +1,8 @@
 import os
 import time
 from pathlib import Path
+import in_place
+from copy import deepcopy
 # Foundation for "to-do list":
 # Have at least one list available to any one user ( >= 1 )
 # The lists data needs to be saved in a .txt file
@@ -38,11 +40,13 @@ class List:
                 # check if the list you're looking for exists
                 assert Path(f'{list_path}').is_file(), 'File path already exists'
             except AssertionError:
-                # make and open the list for writing, if it doesn't exist
+                # open the list for writing, if it already exists
                 self.add_item(list_path, content, 'x')
+                print('List created successfully')
             else:
-                # just add text to it, if it does exist
+                # make a write to the list, if it doesn't exist
                 self.add_item(list_path, content, 'a')
+                print('Items added successfully')
 
 
     def add_item(self, list_path: str, content: str, action: str):
@@ -52,18 +56,47 @@ class List:
         formatted_content.extend("\n- ".join(content.split('-')))
         with open(f'{list_path}.txt', action) as file:
             if action == 'x':
-                file.write(f'{list_path.split('\\')[-1]} list:') 
+                file.write(f'{list_path.split('\\')[-1]} list:')
             file.writelines(formatted_content)
 
     def read_list(self, list_path):
         with open(f'{list_path}.txt', 'r') as file:
             content = file.read()
-            print(content)
+            print("List contents:")
+            print('(empty)') if content == '' else print(content)
 
-    def remove_item(self, list_path):
-        # Gotta think of a way to be able to remove list items from the .txt file
-        with open(f'{list_path}.txt', '') as file:
-            file.read()
+    def edit_list(self, list_path: str, remove_content: str, substitute_content: str) -> None:
+        # 
+        edit_list_dict = {}
+        # Make arrays from strings passed, to fill a hash table
+        remove_items = [r for r in remove_content.split('-')]
+        substitute_items = [r for r in substitute_content.split('-')]
+        # Populate the hash table
+        # if removable content is len == 1, then replacement content goes in the place of that one item
+        # if sub_content len == 1 and remove_content is more, then substitues all removes with that one item
+        # any other mismatch = don't edit and produce an error message
+        if len(remove_items) == len(substitute_items):
+        # if removable content and replacement content is equal amounts, replace everything in order
+            for i in range(len(remove_items)):
+                # map keys to replaceable item names and values to substitute item names
+                edit_list_dict[remove_items[i]] = substitute_items[i]
+            with in_place.InPlace(f'{list_path}.txt') as file:
+                # get file content
+                get_content = file.read()
+                # get all items from file
+                split_content_items: list = [f'\n- {item[:-1]}' if '\n' in item else f'\n- {item}' for item in get_content.split('- ')[1:]]
+                # make a copy whose elements we'll change and write to file
+                content_items_copy = deepcopy(split_content_items)
+                # go through hash table and find values
+                for key, value in edit_list_dict.items():
+                    for i in range(len(split_content_items)):
+                        if key == split_content_items[i][3:]:
+                            # make changes to copy that's gonna get written into the file
+                            content_items_copy[i] = f'\n- {value}'
+                file.write(f'{list_path.split('\\')[-1]} list:')
+                file.writelines(content_items_copy)
+# -------------------------- Some words get lost along the way, it probably has something to do with non-last words having an 
+# -------------------------- "\n- " in the front of the word, when the final array gets made
 
 
 
@@ -121,7 +154,6 @@ if __name__ == "__main__":
         # This should be changed later on to only update 
         # if there is any additional data the user passed
         existing_users = load_users(users_file_path)
-        print(existing_users)
         try:
             user_input = input('Make a new list(M), Add to an existing list(A),\nRead one of your lists(R), or edit a list(E): ').upper()
             assert user_input in ['M', 'A', 'R', 'E']
@@ -154,22 +186,24 @@ if __name__ == "__main__":
                     except AssertionError as e:
                         print("Folder doesn't exist")
                         print(e)
-                    list_title = input('Choose what is going to be the title of your list: ').lower()
-                    full_file_path = f'{users_file_path}\\{user_name}\\{list_title}'
                     try:
+                        list_title = input('Choose what is going to be the title of your list: ').lower()
+                        full_file_path = f'{users_file_path}\\{user_name}\\{list_title}'
                         has_list = False
                         # Check if file exists for given user
                         for user_list in existing_users[user_name].user_lists:
                             if user_list.title == list_title:
                                 has_list = True
                                 active_user_list = user_list
-                        assert has_list
-                    except AssertionError as e:
-                        print(f'List at path: {full_file_path}.txt was not found')
-                        print(e, ' Error')
-                    else:
                         user_content = input("What do you want to write in your list?\n(follow the format '-item-item-item...', the dash is used as a seperator):\n")
                         active_user_list.add_item(full_file_path, user_content, 'a')
+                    except NameError as e:
+                        print(f"\tList '{list_title}' doesn't exist for {user_name}")
+                        print(f'{e}', ' NameError')
+                    except KeyError as e:
+                        print(f"User {user_name} doesn't have any lists in path: {users_file_path}")
+                        print(f'{e}', ' KeyError')
+                    else: continue
                 case 'R':
                     # Read content of existing list
                     user_name = input('What directory(folder) name is your list under?\n(a valid folder name is alphanumeric(no special characters)): ').lower()
@@ -187,18 +221,45 @@ if __name__ == "__main__":
                         for user_list in existing_users[user_name].user_lists:
                             if user_list.title == list_title:
                                 has_list = True
-                                active_user_list = user_list
-                        assert has_list
-                    except AssertionError as e:
-                        print(f'List at path: {full_file_path}.txt was not found')
-                        print(e, ' Error')
-                    else:
-                        print(f"Contents of list '{active_user_list.title}'")
+                                active_user_list = user_list                        
                         active_user_list.read_list(full_file_path)
-                    pass
+                    except NameError as e:
+                        print(f"\tList '{list_title}' doesn't exist for {user_name}")
+                        print(f'{e}', ' NameError')
+                    except KeyError as e:
+                        print(f"User {user_name} doesn't have any lists in path: {users_file_path}")
+                        print(f'{e}', ' KeyError')
+                    else: continue
                 case 'E':
                     # Edit an existing list
-                    print('E')
+                    user_name = input('What directory(folder) name do you want your list to be under?\n(a valid folder name is alphanumeric(no special characters)): ').lower()
+                    try:
+                        # Check if user exists
+                        assert Path(f'{users_file_path}\\{user_name}').is_dir()
+                    except AssertionError as e:
+                        print("Folder doesn't exist")
+                        print(e)
+                    try:
+                        list_title = input('Choose what is going to be the title of your list: ').lower()
+                        full_file_path = f'{users_file_path}\\{user_name}\\{list_title}'
+                        has_list = False
+                        # Check if file exists for given user
+                        for user_list in existing_users[user_name].user_lists:
+                            if user_list.title == list_title:
+                                has_list = True
+                                active_user_list = user_list
+                        remove_content = input("If you want to replace one or more list items, write them down seperated by a dash '-': ").lower()
+                        substitute_content = input("Now, write what do you want to replace them with(this also needs to be seperated by a dash), or leave it blank to remove the previously entered items\n")
+                        print('Everything will be replaced in order')
+                        time.sleep(2)
+                        active_user_list.edit_list(full_file_path, remove_content[1:], substitute_content[1:])
+                    except NameError as e:
+                        print(f"\tList '{list_title}' doesn't exist for {user_name}")
+                        #print(f'{e}', ' NameError')
+                    except KeyError as e:
+                        print(f"User {user_name} doesn't have any lists in path: {users_file_path}")
+                        #print(f'{e}', ' KeyError')
+                    else: continue
             stop_script = input("Would you like to make any further changes? (Y\\N)").upper()
             try:
                 assert stop_script == 'Y'
